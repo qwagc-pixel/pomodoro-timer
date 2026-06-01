@@ -4,6 +4,10 @@
 .LSOverride
 Icon?
 
+# Python
+__pycache__/
+*.pyc
+
 # 临时文件
 *.swp
 *~
