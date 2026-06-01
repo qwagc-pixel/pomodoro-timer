@@ -4,6 +4,8 @@
 
 一个纯 Bash 编写的终端番茄钟,带实时时钟、ASCII 大号倒计时、进度条,以及 Apple 经典彩虹配色的 WWDC 倒计时横幅。附带 macOS `.app` 应用包与图标。
 
+> 本项目使用 Anthropic 的 AI 助手 [Claude](https://claude.com/claude-code) 开发。
+
 ![icon](icon/icon.png)
 
 ## 功能
@@ -58,10 +60,6 @@ icon/               # 图标素材(png / svg / icns)
 
 - macOS(系统通知与 `.app` 启动依赖 `osascript`;核心计时逻辑为通用 Bash)
 - 一个支持 256 色与 Unicode 的终端
-
-## 使用 Claude 开发
-
-本项目(番茄钟脚本、macOS 应用包、图标)均使用 Anthropic 的 AI 助手 [Claude](https://claude.com/claude-code) 开发。
 
 ## License
 

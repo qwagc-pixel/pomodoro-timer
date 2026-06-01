@@ -4,6 +4,8 @@
 
 A terminal Pomodoro timer written in pure Bash, featuring a live clock, large ASCII countdown digits, a progress bar, and a WWDC countdown banner styled with the classic Apple rainbow logo colors. Ships with a macOS `.app` bundle and an icon.
 
+> Developed with [Claude](https://claude.com/claude-code), Anthropic's AI assistant.
+
 ![icon](icon/icon.png)
 
 ## Features
@@ -58,10 +60,6 @@ icon/               # icon assets (png / svg / icns)
 
 - macOS (notifications and the `.app` launcher rely on `osascript`; the core timing logic is portable Bash)
 - A terminal with 256-color and Unicode support
-
-## Built with Claude
-
-This project — the timer script, the macOS app bundle, and the icon — was built with [Claude](https://claude.com/claude-code), Anthropic's AI assistant.
 
 ## License
 
