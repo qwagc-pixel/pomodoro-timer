@@ -1,5 +1,7 @@
 # 番茄钟 · Pomodoro Timer
 
+**简体中文** · [English](README.en.md)
+
 一个纯 Bash 编写的终端番茄钟,带实时时钟、ASCII 大号倒计时、进度条,以及 Apple 经典彩虹配色的 WWDC 倒计时横幅。附带 macOS `.app` 应用包与图标。
 
 ![icon](icon/icon.png)
