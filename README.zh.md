@@ -30,11 +30,21 @@
 
 按 `Ctrl-C` 退出。
 
-### 作为 macOS 应用
+### 作为 macOS 应用(终端界面)
 
 双击 `番茄钟.app` 即可,它会打开一个 Terminal 窗口运行番茄钟。可拖入「程序坞」或「应用程序」文件夹。
 
 > 首次打开若被 Gatekeeper 拦截(未签名的本地 App),右键图标 → **打开** → 再点一次「打开」即可。
+
+### 图形界面版(GUI)
+
+用 Python + tkinter 编写的窗口版本(无需额外依赖):
+
+```bash
+python3 pomodoro_gui.py
+```
+
+或双击 `番茄钟GUI.app`。界面包含圆环倒计时(外圈 Apple 彩虹装饰)、当前阶段、番茄进度圆点,以及 开始 / 暂停 / 重置 / 跳过 按钮。
 
 ## 配置
 
@@ -51,8 +61,10 @@ WWDC_DATE="2026-06-08"  # WWDC 日期,天数自动重算
 ## 项目结构
 
 ```
-pomodoro            # 番茄钟主程序(Bash 脚本 / Unix 可执行文件)
-番茄钟.app/          # macOS 应用包(双击启动)
+pomodoro            # 终端版番茄钟(Bash 脚本 / Unix 可执行文件)
+pomodoro_gui.py     # 图形界面版(Python + tkinter)
+番茄钟.app/          # macOS 应用包 —— 终端界面(双击启动)
+番茄钟GUI.app/       # macOS 应用包 —— 图形界面(双击启动)
 icon/               # 图标素材(png / svg / icns)
 ```
 

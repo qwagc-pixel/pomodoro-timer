@@ -1,0 +1,7 @@
+#!/bin/bash
+#
+# 番茄钟GUI.app 启动器
+# 直接用 python3 运行图形界面（无需 Terminal 窗口）
+#
+DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
+exec /usr/bin/env python3 "$DIR/pomodoro_gui.py"

@@ -30,11 +30,21 @@ A terminal Pomodoro timer written in pure Bash, featuring a live clock, large AS
 
 Press `Ctrl-C` to quit.
 
-### As a macOS app
+### As a macOS app (terminal UI)
 
 Double-click `番茄钟.app` — it opens a Terminal window running the timer. You can drag it into the Dock or the Applications folder.
 
 > On first launch, if Gatekeeper blocks it (unsigned local app), right-click the icon → **Open** → click **Open** once more.
+
+### Graphical version (GUI)
+
+A windowed version built with Python + tkinter (no extra dependencies):
+
+```bash
+python3 pomodoro_gui.py
+```
+
+Or double-click `番茄钟GUI.app`. It shows a circular countdown ring (with an outer Apple-rainbow accent), the current phase, pomodoro-set dots, and Start / Pause / Reset / Skip buttons.
 
 ## Configuration
 
@@ -51,8 +61,10 @@ WWDC_DATE="2026-06-08"  # WWDC date; remaining days are computed automatically
 ## Project structure
 
 ```
-pomodoro            # the timer (Bash script / Unix executable)
-番茄钟.app/          # macOS app bundle (double-click to launch)
+pomodoro            # terminal timer (Bash script / Unix executable)
+pomodoro_gui.py     # graphical timer (Python + tkinter)
+番茄钟.app/          # macOS app bundle — terminal UI (double-click)
+番茄钟GUI.app/       # macOS app bundle — graphical UI (double-click)
 icon/               # icon assets (png / svg / icns)
 ```
 
