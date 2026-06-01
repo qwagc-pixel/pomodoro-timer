@@ -1,7 +1,48 @@
 #!/bin/bash
 #
 # 番茄钟GUI.app 启动器
-# 直接用 python3 运行图形界面（无需 Terminal 窗口）
+# 主动挑选一个「功能完整且含 tkinter」的 python3 运行图形界面。
 #
+# 背景：双击启动时 PATH 是精简的，`env python3` 可能落到系统自带的
+# /usr/bin/python3（较旧、在本机运行此 GUI 会卡死），因此这里显式按
+# 优先级查找可用的解释器，并把日志写到 ~/Library/Logs 便于排查。
+#
+
 DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
-exec /usr/bin/env python3 "$DIR/pomodoro_gui.py"
+SCRIPT="$DIR/pomodoro_gui.py"
+LOG="$HOME/Library/Logs/番茄钟GUI.log"
+
+# 候选解释器（优先功能完整的版本，最后才退回系统自带）
+CANDIDATES=(
+  /usr/local/bin/python3
+  /opt/homebrew/bin/python3
+  /Library/Frameworks/Python.framework/Versions/Current/bin/python3
+  /Library/Frameworks/Python.framework/Versions/3.13/bin/python3
+  /Library/Frameworks/Python.framework/Versions/3.12/bin/python3
+  /usr/bin/python3
+)
+
+PY=""
+for c in "${CANDIDATES[@]}"; do
+  if [ -x "$c" ] && "$c" -c 'import tkinter' >/dev/null 2>&1; then
+    PY="$c"
+    break
+  fi
+done
+
+# 候选都不行时，再用 PATH 里的 python3 兜底
+if [ -z "$PY" ]; then
+  PY="$(command -v python3 2>/dev/null)"
+fi
+
+{
+  echo "----- $(date) -----"
+  echo "选用解释器: ${PY:-(未找到)}"
+} >> "$LOG" 2>&1
+
+if [ -z "$PY" ]; then
+  /usr/bin/osascript -e 'display alert "番茄钟" message "未找到可用的 python3（需自带 tkinter）。请安装 Python 3。"'
+  exit 1
+fi
+
+exec "$PY" "$SCRIPT" >> "$LOG" 2>&1
