@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# 番茄钟.app 启动器
+# 在 Terminal 中运行内嵌的 pomodoro 脚本
+#
+
+# 解析 .app 内 Resources 目录的绝对路径
+DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
+SCRIPT="$DIR/pomodoro"
+
+# 确保脚本可执行
+chmod +x "$SCRIPT" 2>/dev/null
+
+# 通过 AppleScript 让 Terminal 打开一个新窗口运行脚本，并置于前台
+/usr/bin/osascript <<OSA
+tell application "Terminal"
+    activate
+    do script "clear; exec " & quoted form of "$SCRIPT"
+end tell
+OSA

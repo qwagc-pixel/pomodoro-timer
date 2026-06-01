@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# 临时文件
+*.swp
+*~

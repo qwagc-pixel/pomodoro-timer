@@ -1,0 +1,290 @@
+#!/usr/bin/env bash
+#
+# POMODORO TIMER  --  ASCII edition
+# 实时时间 + 45 分钟专注 / 10 分钟休息 + WWDC 26 倒计时
+#
+# 用法:
+#   ./pomodoro            # 默认 45 分钟专注 / 10 分钟休息
+#   ./pomodoro 25 5       # 自定义: 专注 25 分钟 / 休息 5 分钟
+#
+# 退出: Ctrl-C
+
+set -u
+export LANG=${LANG:-en_US.UTF-8}
+
+# ─────────────────────────── 配置 ───────────────────────────
+FOCUS_MIN=${1:-45}      # 专注时长（分钟）
+BREAK_MIN=${2:-10}      # 短休息时长（分钟）
+LONGBREAK_MIN=${3:-30}  # 长休息时长（分钟）
+SET_SIZE=4              # 每完成几个番茄进入一次长休息
+WWDC_DATE="2026-06-08"  # WWDC 2026 预计开幕日（可按官方公布调整）
+
+# ─────────────────────────── 颜色 ───────────────────────────
+ESC=$'\033'
+RESET="${ESC}[0m"
+BOLD="${ESC}[1m"
+DIM="${ESC}[2m"
+
+RED="${ESC}[38;5;203m"
+GREEN="${ESC}[38;5;114m"
+YELLOW="${ESC}[38;5;221m"
+BLUE="${ESC}[38;5;75m"
+PURPLE="${ESC}[38;5;141m"
+CYAN="${ESC}[38;5;80m"
+GRAY="${ESC}[38;5;245m"
+WHITE="${ESC}[38;5;255m"
+ORANGE="${ESC}[38;5;215m"
+
+# ─────────────────────────── 终端控制 ───────────────────────────
+hide_cursor()  { printf '%s' "${ESC}[?25l"; }
+show_cursor()  { printf '%s' "${ESC}[?25h"; }
+clear_screen() { printf '%s' "${ESC}[2J${ESC}[H"; }
+move_home()    { printf '%s' "${ESC}[H"; }
+
+cleanup() {
+  show_cursor
+  printf '\n%s  -- 再见，保持专注 --%s\n\n' "${CYAN}" "${RESET}"
+  exit 0
+}
+trap cleanup INT TERM
+
+# ─────────────────────────── 工具 ───────────────────────────
+
+# 重复字符 n 次
+repeat() {
+  local n=$1 c=$2 out="" i
+  for ((i=0; i<n; i++)); do out+="$c"; done
+  printf '%s' "$out"
+}
+
+# 居中输出一行（先清整行，避免上一帧残留）
+#   center  text  visible_width  cols
+center() {
+  local text=$1 vis=$2 cols=$3
+  local pad=$(( (cols - vis) / 2 ))
+  (( pad < 0 )) && pad=0
+  printf '%s%*s%s\n' "${ESC}[2K" "${pad}" "" "${text}"
+}
+
+# 输出一个已清空的空行
+blank() { printf '%s\n' "${ESC}[2K"; }
+
+# 计算距离 WWDC 还有多少天
+days_to_wwdc() {
+  local now target
+  now=$(date +%s)
+  if date -j >/dev/null 2>&1; then
+    target=$(date -j -f "%Y-%m-%d" "${WWDC_DATE}" +%s 2>/dev/null)
+  else
+    target=$(date -d "${WWDC_DATE}" +%s 2>/dev/null)
+  fi
+  [ -z "${target}" ] && { echo "?"; return; }
+  echo $(( (target - now) / 86400 ))
+}
+
+# ─────────────────── 5 行 ASCII 大字体 ───────────────────
+# 结果写入全局数组 BIG_LINES（5 行，等宽）
+BIG_LINES=()
+big_text() {
+  local str=$1
+  local l0="" l1="" l2="" l3="" l4=""
+  local i ch g0 g1 g2 g3 g4
+  for ((i=0; i<${#str}; i++)); do
+    ch=${str:i:1}
+    case "$ch" in
+      0) g0="██████"; g1="██  ██"; g2="██  ██"; g3="██  ██"; g4="██████";;
+      1) g0="   ██ "; g1="  ███ "; g2="   ██ "; g3="   ██ "; g4="  ████";;
+      2) g0="██████"; g1="    ██"; g2="██████"; g3="██    "; g4="██████";;
+      3) g0="██████"; g1="    ██"; g2=" █████"; g3="    ██"; g4="██████";;
+      4) g0="██  ██"; g1="██  ██"; g2="██████"; g3="    ██"; g4="    ██";;
+      5) g0="██████"; g1="██    "; g2="██████"; g3="    ██"; g4="██████";;
+      6) g0="██████"; g1="██    "; g2="██████"; g3="██  ██"; g4="██████";;
+      7) g0="██████"; g1="    ██"; g2="   ██ "; g3="  ██  "; g4="  ██  ";;
+      8) g0="██████"; g1="██  ██"; g2="██████"; g3="██  ██"; g4="██████";;
+      9) g0="██████"; g1="██  ██"; g2="██████"; g3="    ██"; g4="██████";;
+      :) g0="  ";     g1="██";     g2="  ";     g3="██";     g4="  ";;
+      *) g0="   ";    g1="   ";    g2="   ";    g3="   ";    g4="   ";;
+    esac
+    l0+="$g0 "; l1+="$g1 "; l2+="$g2 "; l3+="$g3 "; l4+="$g4 "
+  done
+  BIG_LINES=("$l0" "$l1" "$l2" "$l3" "$l4")
+}
+
+# 分隔标题:  ──────[ LABEL ]──────
+rule() {
+  local label=$1 color=$2 cols=$3
+  local dash; dash=$(repeat 16 "─")
+  local mid="[ ${label} ]"
+  local vis=$(( 16 + 16 + ${#mid} ))
+  center "${color}${dash}${WHITE}${BOLD}${mid}${RESET}${color}${dash}${RESET}" "${vis}" "${cols}"
+}
+
+# 进度条:  [████████░░░░░░░░]  60%
+progress_bar() {
+  local elapsed=$1 total=$2 width=$3 color=$4 cols=$5
+  (( total <= 0 )) && total=1
+  local filled=$(( elapsed * width / total ))
+  (( filled > width )) && filled=$width
+  (( filled < 0 )) && filled=0
+  local empty=$(( width - filled ))
+  local pct=$(( elapsed * 100 / total ))
+  local fbar; fbar=$(repeat "${filled}" "█")
+  local ebar; ebar=$(repeat "${empty}"  "░")
+  local track="${ESC}[38;5;24m"      # 暗青色轨道（非灰）
+  local vis=$(( width + 2 + 5 ))     # 括号 + 空格 + 百分比
+  center "${WHITE}[${color}${fbar}${track}${ebar}${WHITE}]${RESET}  ${WHITE}${BOLD}${pct}%${RESET}" "${vis}" "${cols}"
+}
+
+# Apple 经典彩虹 logo 六色（自上而下：绿/黄/橙/红/紫/蓝）
+APPLE_RAINBOW=(77 220 208 203 133 38)
+
+# 把一段文字按彩虹色逐字母上色（空格不计色）
+# 结果写入 RB_LINE / RB_VIS
+RB_LINE=""; RB_VIS=0
+rainbow_text() {
+  local plain=$1
+  local out="" i ch ci=0
+  for ((i=0; i<${#plain}; i++)); do
+    ch=${plain:i:1}
+    if [ "$ch" = " " ]; then
+      out+=" "
+    else
+      out+="${ESC}[38;5;${APPLE_RAINBOW[ci%6]}m${BOLD}${ch}${RESET}"
+      ci=$(( ci + 1 ))
+    fi
+  done
+  RB_LINE="$out"; RB_VIS=${#plain}
+}
+
+# ─────────────────────────── 渲染 ───────────────────────────
+#   render  phase  remain_sec  total_sec  cycle
+render() {
+  local phase=$1 remain=$2 total=$3 cycle=$4
+  local cols; cols=$(tput cols 2>/dev/null || echo 80)
+  local elapsed=$(( total - remain ))
+  local mm=$(( remain / 60 ))
+  local ss=$(( remain % 60 ))
+
+  local pcolor label
+  case "${phase}" in
+    专注)   pcolor="${RED}";    label="FOCUS"      ;;
+    长休息) pcolor="${PURPLE}"; label="LONG BREAK" ;;
+    *)      pcolor="${GREEN}";  label="BREAK"      ;;
+  esac
+
+  # 全部使用 ASCII，避免中文在终端占 2 列导致对齐错乱
+  local clock;   clock=$(date "+%H:%M:%S")
+  local datestr; datestr=$(LC_TIME=C date "+%Y-%m-%d  %a")
+  local wdays;   wdays=$(days_to_wwdc)
+
+  move_home
+
+  # 标题框
+  local tw=45
+  local tbar; tbar=$(repeat 43 "─")
+  center "${PURPLE}${BOLD}┌${tbar}┐${RESET}"                                        "${tw}" "${cols}"
+  center "${PURPLE}${BOLD}│${CYAN}      P O M O D O R O   T I M E R      ${PURPLE}│${RESET}" "${tw}" "${cols}"
+  center "${PURPLE}${BOLD}└${tbar}┘${RESET}"                                        "${tw}" "${cols}"
+  blank
+
+  # 当前日期 + 时间（同一行）
+  local CLOCKCLR="${ESC}[38;5;82m"   # 亮绿色，数字钟质感，高可读
+  center "${CYAN}${datestr}${RESET}    ${CLOCKCLR}${BOLD}${clock}${RESET}" $(( ${#datestr} + 4 + 8 )) "${cols}"
+  blank
+
+  # 阶段分隔线
+  rule "${label}" "${pcolor}" "${cols}"
+
+  # 大号倒计时（5 行 ASCII 数字）
+  big_text "$(printf '%02d:%02d' "${mm}" "${ss}")"
+  local row
+  for row in "${BIG_LINES[@]}"; do
+    center "${pcolor}${BOLD}${row}${RESET}" "${#row}" "${cols}"
+  done
+
+  # 进度条
+  progress_bar "${elapsed}" "${total}" 32 "${pcolor}" "${cols}"
+
+  # 当前番茄信息（纯 ASCII）—— 用纯文本算宽度，避免计数出错
+  local info_plain="POMODORO #${cycle}   |   FOCUS ${FOCUS_MIN}m / BREAK ${BREAK_MIN}m / LONG ${LONGBREAK_MIN}m"
+  center "${YELLOW}POMODORO #${cycle}   ${BLUE}|${YELLOW}   FOCUS ${FOCUS_MIN}m ${BLUE}/${YELLOW} BREAK ${BREAK_MIN}m ${BLUE}/${PURPLE} LONG ${LONGBREAK_MIN}m${RESET}" \
+         "${#info_plain}" "${cols}"
+
+  # 本组进度：每 SET_SIZE 个番茄一组，满组后进入长休息
+  local done_in_set=$(( (cycle - 1) % SET_SIZE )) d dots=""
+  for ((d=0; d<SET_SIZE; d++)); do
+    if (( d < done_in_set )); then dots+="●"; else dots+="○"; fi
+  done
+  center "${CYAN}set ${pcolor}${dots}${CYAN} -> long break${RESET}" $(( 4 + SET_SIZE + 14 )) "${cols}"
+  blank
+
+  # WWDC 横幅（字母用 Apple 经典彩虹 logo 配色）
+  local bw=45
+  local bbar; bbar=$(repeat 43 "═")
+  center "${ORANGE}${BOLD}╔${bbar}╗${RESET}" "${bw}" "${cols}"
+  rainbow_text "W W D C   2 6   I S   C O M I N G"
+  local wlp=$(( (43 - RB_VIS) / 2 )); (( wlp < 0 )) && wlp=0
+  local wrp=$(( 43 - RB_VIS - wlp ))
+  center "${ORANGE}${BOLD}║${RESET}$(repeat $wlp ' ')${RB_LINE}$(repeat $wrp ' ')${ORANGE}${BOLD}║${RESET}" "${bw}" "${cols}"
+  local line
+  if   [ "${wdays}" -gt 0 ] 2>/dev/null; then line="${wdays} days until the keynote"
+  elif [ "${wdays}" = "0" ] 2>/dev/null; then line="HERE TODAY !"
+  else                                        line="keep dreaming"
+  fi
+  local lpad=$(( (43 - ${#line}) / 2 )); (( lpad < 0 )) && lpad=0
+  local rpad=$(( 43 - ${#line} - lpad ))
+  center "${ORANGE}${BOLD}║${RESET}$(repeat $lpad ' ')${CYAN}${line}${RESET}$(repeat $rpad ' ')${ORANGE}${BOLD}║${RESET}" "${bw}" "${cols}"
+  center "${ORANGE}${BOLD}╚${bbar}╝${RESET}" "${bw}" "${cols}"
+  blank
+
+  center "${BLUE}[ Ctrl-C to quit ]${RESET}" 18 "${cols}"
+
+  # 清除下方残留
+  printf '%s' "${ESC}[J"
+}
+
+# ─────────────────── 阶段切换提醒 ───────────────────
+notify() {
+  local title=$1 msg=$2
+  printf '\a'
+  if command -v osascript >/dev/null 2>&1; then
+    osascript -e "display notification \"${msg}\" with title \"${title}\"" >/dev/null 2>&1 &
+  fi
+}
+
+# ─────────────────── 倒计时循环 ───────────────────
+countdown() {
+  local phase=$1 total=$2 cycle=$3
+  local remain=$total
+  while [ "${remain}" -ge 0 ]; do
+    render "${phase}" "${remain}" "${total}" "${cycle}"
+    sleep 1
+    remain=$(( remain - 1 ))
+  done
+}
+
+# ─────────────────────────── 主程序 ───────────────────────────
+main() {
+  hide_cursor
+  clear_screen
+  local focus_sec=$(( FOCUS_MIN * 60 ))
+  local break_sec=$(( BREAK_MIN * 60 ))
+  local long_sec=$(( LONGBREAK_MIN * 60 ))
+  local cycle=1
+  while true; do
+    countdown "专注" "${focus_sec}" "${cycle}"
+    if (( cycle % SET_SIZE == 0 )); then
+      # 完成一组（SET_SIZE 个番茄）→ 长休息
+      notify "Pomodoro" "完成 ${SET_SIZE} 个番茄，长休息 ${LONGBREAK_MIN} 分钟"
+      countdown "长休息" "${long_sec}" "${cycle}"
+      notify "Pomodoro" "长休息结束，开始第 $((cycle+1)) 个番茄"
+    else
+      notify "Pomodoro" "专注结束，休息 ${BREAK_MIN} 分钟"
+      countdown "休息" "${break_sec}" "${cycle}"
+      notify "Pomodoro" "休息结束，开始第 $((cycle+1)) 个番茄"
+    fi
+    cycle=$(( cycle + 1 ))
+  done
+}
+
+main
